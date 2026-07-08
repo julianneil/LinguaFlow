@@ -6,66 +6,37 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using LinguaFlow.Models;
 
-/// <summary>
-/// HTTP client for the local Ollama REST API.
-/// </summary>
 public sealed class OllamaClient
 {
     private static readonly Uri DefaultEndpoint = new("http://localhost:11434/");
     private readonly HttpClient httpClient;
 
-    /// <summary>
-    /// Creates an Ollama client that talks to the local default endpoint.
-    /// </summary>
     public OllamaClient()
         : this(new HttpClient { BaseAddress = DefaultEndpoint, Timeout = TimeSpan.FromMinutes(5) })
     {
     }
 
-    /// <summary>
-    /// Creates an Ollama client for a configured endpoint.
-    /// </summary>
-    /// <param name="endpoint">Base endpoint such as http://localhost:11434.</param>
     public OllamaClient(string endpoint)
         : this(new HttpClient { BaseAddress = CreateEndpoint(endpoint), Timeout = TimeSpan.FromMinutes(5) })
     {
     }
 
-    /// <summary>
-    /// Creates an Ollama client with a caller-owned HTTP client.
-    /// </summary>
-    /// <param name="httpClient">Configured HTTP client.</param>
     public OllamaClient(HttpClient httpClient)
     {
         this.httpClient = httpClient;
     }
 
-    /// <summary>
-    /// Updates the base endpoint used by future Ollama requests.
-    /// </summary>
-    /// <param name="endpoint">Base endpoint such as http://localhost:11434.</param>
     public void ConfigureEndpoint(string endpoint)
     {
         httpClient.BaseAddress = CreateEndpoint(endpoint);
     }
 
-    /// <summary>
-    /// Reads the model names currently installed in Ollama.
-    /// </summary>
-    /// <param name="cancellationToken">Token used to cancel the request.</param>
-    /// <returns>Installed model names.</returns>
     public async Task<IReadOnlyList<string>> GetModelsAsync(CancellationToken cancellationToken)
     {
         var response = await httpClient.GetFromJsonAsync<OllamaTagsResponse>("api/tags", cancellationToken);
         return response?.Models.Select(model => model.Name).Where(name => !string.IsNullOrWhiteSpace(name)).ToArray() ?? [];
     }
 
-    /// <summary>
-    /// Sends a chat completion request to Ollama.
-    /// </summary>
-    /// <param name="request">Translation request details.</param>
-    /// <param name="cancellationToken">Token used to cancel the request.</param>
-    /// <returns>Translated text and request metadata.</returns>
     public async Task<TranslationResult> TranslateAsync(TranslationRequest request, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();

@@ -9,9 +9,6 @@ using LinguaFlow.Services.Ollama;
 using LinguaFlow.Services.Settings;
 using LinguaFlow.Services.Translation;
 
-/// <summary>
-/// View model for the main document workspace.
-/// </summary>
 public sealed class MainViewModel : ObservableObject
 {
     private readonly OllamaClient ollamaClient;
@@ -35,9 +32,6 @@ public sealed class MainViewModel : ObservableObject
     private int wordCount;
     private int characterCount;
 
-    /// <summary>
-    /// Initializes commands and translation services for the document workspace.
-    /// </summary>
     public MainViewModel()
     {
         settingsService = new AppSettingsService();
@@ -63,8 +57,6 @@ public sealed class MainViewModel : ObservableObject
         NewDocumentCommand = new RelayCommand(_ => NewDocument());
         OpenDocumentCommand = CreatePlaceholderCommand("Open document is not connected yet.");
         SaveDocumentCommand = CreatePlaceholderCommand("Save document is not connected yet.");
-        ExportDocxCommand = CreatePlaceholderCommand("DOCX export is not connected yet.");
-        ExportPdfCommand = CreatePlaceholderCommand("PDF export is not connected yet.");
         CopyTranslationCommand = new RelayCommand(_ => CopyTranslation(), _ => !string.IsNullOrWhiteSpace(TranslatedText));
         OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
         TranslateCommand = new AsyncRelayCommand(TranslateAsync, CanTranslate);
@@ -72,24 +64,12 @@ public sealed class MainViewModel : ObservableObject
         _ = LoadOllamaModelsAsync();
     }
 
-    /// <summary>
-    /// Translation engines available to the workspace.
-    /// </summary>
     public ObservableCollection<string> TranslationEngines { get; }
 
-    /// <summary>
-    /// Translation timing modes available to the workspace.
-    /// </summary>
     public ObservableCollection<string> TranslationModes { get; }
 
-    /// <summary>
-    /// Models available to the selector.
-    /// </summary>
     public ObservableCollection<string> AvailableModels { get; }
 
-    /// <summary>
-    /// English document text currently in the editor.
-    /// </summary>
     public string SourceText
     {
         get => sourceText;
@@ -104,9 +84,6 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Translated document text shown in the preview pane.
-    /// </summary>
     public string TranslatedText
     {
         get => translatedText;
@@ -119,9 +96,6 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Selected translation engine for document updates.
-    /// </summary>
     public string SelectedTranslationEngine
     {
         get => selectedTranslationEngine;
@@ -136,9 +110,6 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Selected translation timing mode.
-    /// </summary>
     public string SelectedTranslationMode
     {
         get => selectedTranslationMode;
@@ -154,24 +125,12 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Indicates whether typing should automatically trigger translation.
-    /// </summary>
     public bool IsLiveTranslationEnabled => SelectedTranslationMode == "Live";
 
-    /// <summary>
-    /// Visibility for the manual Translate button.
-    /// </summary>
     public Visibility ManualTranslateButtonVisibility => IsLiveTranslationEnabled ? Visibility.Collapsed : Visibility.Visible;
 
-    /// <summary>
-    /// Indicates whether the Ollama-specific controls should be active.
-    /// </summary>
     public bool IsOllamaSelected => SelectedTranslationEngine == "Ollama";
 
-    /// <summary>
-    /// Selected Ollama model for translation requests.
-    /// </summary>
     public string SelectedModel
     {
         get => selectedModel;
@@ -184,98 +143,52 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Current translation state shown in the status bar.
-    /// </summary>
     public string TranslationStatus
     {
         get => translationStatus;
         set => SetProperty(ref translationStatus, value);
     }
 
-    /// <summary>
-    /// Last translation latency shown in the status bar.
-    /// </summary>
     public string LatencyDisplay
     {
         get => latencyDisplay;
         set => SetProperty(ref latencyDisplay, value);
     }
 
-    /// <summary>
-    /// Word count for the active English document.
-    /// </summary>
     public int WordCount
     {
         get => wordCount;
         set => SetProperty(ref wordCount, value);
     }
 
-    /// <summary>
-    /// Character count for the active English document.
-    /// </summary>
     public int CharacterCount
     {
         get => characterCount;
         set => SetProperty(ref characterCount, value);
     }
 
-    /// <summary>
-    /// Token usage for the last translation request.
-    /// </summary>
     public string TokenUsageDisplay
     {
         get => tokenUsageDisplay;
         set => SetProperty(ref tokenUsageDisplay, value);
     }
 
-    /// <summary>
-    /// Current editor font size.
-    /// </summary>
     public double EditorFontSize
     {
         get => editorFontSize;
         set => SetProperty(ref editorFontSize, value);
     }
 
-    /// <summary>
-    /// Starts a new document.
-    /// </summary>
     public ICommand NewDocumentCommand { get; }
 
-    /// <summary>
-    /// Opens an existing document.
-    /// </summary>
     public ICommand OpenDocumentCommand { get; }
 
-    /// <summary>
-    /// Saves the active document.
-    /// </summary>
     public ICommand SaveDocumentCommand { get; }
 
-    /// <summary>
-    /// Exports the active document as DOCX.
-    /// </summary>
-    public ICommand ExportDocxCommand { get; }
-
-    /// <summary>
-    /// Exports the active document as PDF.
-    /// </summary>
-    public ICommand ExportPdfCommand { get; }
-
-    /// <summary>
-    /// Copies the translated document to the clipboard.
-    /// </summary>
     public ICommand CopyTranslationCommand { get; }
 
-    /// <summary>
-    /// Opens the application settings.
-    /// </summary>
     public ICommand OpenSettingsCommand { get; }
 
-    /// <summary>
-    /// Translates the current English editor text.
-    /// </summary>
     public ICommand TranslateCommand { get; }
 
     private async Task LoadOllamaModelsAsync()
@@ -473,7 +386,6 @@ public sealed class MainViewModel : ObservableObject
 
     private RelayCommand CreatePlaceholderCommand(string statusMessage)
     {
-        // Phase 2 keeps document command surfaces visible while file services are added later.
         return new RelayCommand(_ => TranslationStatus = statusMessage);
     }
 

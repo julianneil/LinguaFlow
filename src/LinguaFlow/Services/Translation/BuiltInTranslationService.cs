@@ -4,9 +4,6 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using LinguaFlow.Models;
 
-/// <summary>
-/// Provides deterministic in-process translation for short common phrases.
-/// </summary>
 public sealed partial class BuiltInTranslationService : ITranslationService
 {
     private static readonly IReadOnlyDictionary<string, string> PhraseMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -24,10 +21,8 @@ public sealed partial class BuiltInTranslationService : ITranslationService
         ["sincerely"] = "atentamente"
     };
 
-    /// <inheritdoc />
     public string Name => "Built-in";
 
-    /// <inheritdoc />
     public Task<TranslationResult> TranslateAsync(TranslationRequest request, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();

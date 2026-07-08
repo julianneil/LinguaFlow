@@ -1,6 +1,8 @@
 namespace LinguaFlow.Services.Translation;
 
 using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using LinguaFlow.Models;
 
@@ -44,6 +46,9 @@ public sealed partial class BuiltInTranslationService : ITranslationService
         (new Regex(@"\bsincerely\b", RegexOptions.IgnoreCase), "Atentamente"),
         (new Regex(@"\bregards\b", RegexOptions.IgnoreCase), "Saludos")
     ];
+
+    private static readonly Lazy<IReadOnlyDictionary<string, string>> DictionaryFallback = new(LoadDictionary);
+    private static readonly Regex WordPattern = new(@"\b[A-Za-z]+\b", RegexOptions.Compiled);
 
     public string Name => "Built-in";
 
@@ -89,6 +94,41 @@ public sealed partial class BuiltInTranslationService : ITranslationService
             translatedContent = pattern.Replace(translatedContent, replacement);
         }
 
+        translatedContent = TranslateKnownWords(translatedContent);
+
         return leadingWhitespace + translatedContent + trailingWhitespace;
+    }
+
+    private static string TranslateKnownWords(string text)
+    {
+        var dictionary = DictionaryFallback.Value;
+
+        return WordPattern.Replace(text, match =>
+        {
+            if (!dictionary.TryGetValue(match.Value.ToLowerInvariant(), out var translation))
+            {
+                return match.Value;
+            }
+
+            return char.IsUpper(match.Value[0]) ? Capitalize(translation) : translation;
+        });
+    }
+
+    private static IReadOnlyDictionary<string, string> LoadDictionary()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Resources", "Dictionaries", "en-es.json");
+        if (!File.Exists(path))
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(json) ??
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string Capitalize(string value)
+    {
+        return string.IsNullOrEmpty(value) ? value : char.ToUpperInvariant(value[0]) + value[1..];
     }
 }

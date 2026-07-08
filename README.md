@@ -14,6 +14,7 @@ LinguaFlow should feel closer to a document editor than a translation utility. T
 - Rich text English editor
 - Read-only Spanish translation pane
 - Local AI translation through Ollama
+- Built-in offline translation engine for quick local translation behavior
 - Model selection, starting with `mistral-nemo:latest`
 - Translation styles such as natural, professional, business, legal, medical, academic, casual, and literal
 - Debounced real-time translation while typing
@@ -51,6 +52,7 @@ LinguaFlow should feel closer to a document editor than a translation utility. T
 - Allow model selection
 - Send translation requests
 - Display translated output
+- Keep the translation engine switchable between built-in logic and Ollama
 
 ### Phase 3: Real-Time Translation
 
@@ -77,7 +79,12 @@ LinguaFlow should feel closer to a document editor than a translation utility. T
 
 ## Ollama Setup
 
-LinguaFlow is designed to use Ollama for local, offline AI translation. Ollama integration will be added in Phase 2, but the expected setup is:
+LinguaFlow is designed with two translation paths:
+
+- Built-in translation logic for quick local behavior inside the application
+- Ollama-backed local AI translation for higher-quality Spanish rewriting
+
+Ollama integration will be added in Phase 2, but the expected setup is:
 
 1. Install Ollama from the official site:
 

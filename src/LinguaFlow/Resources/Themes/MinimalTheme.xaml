@@ -126,6 +126,7 @@
         <Setter Property="Margin" Value="0,0,4,0" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+        <Setter Property="MinWidth" Value="96" />
     </Style>
 
     <Style x:Key="WorkspaceStyle" TargetType="Grid">

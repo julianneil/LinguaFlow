@@ -20,6 +20,7 @@ public sealed class MainViewModel : ObservableObject
     private string sourceText = string.Empty;
     private string translatedText = string.Empty;
     private string selectedModel = "mistral-nemo:latest";
+    private string selectedTranslationMode = "Live";
     private string selectedTranslationEngine = "Ollama";
     private string translationStatus = "Ready";
     private string latencyDisplay = "Latency: --";
@@ -40,6 +41,12 @@ public sealed class MainViewModel : ObservableObject
         };
 
         TranslationEngines = new ObservableCollection<string>(translationServices.Keys);
+        TranslationModes = new ObservableCollection<string>
+        {
+            "Live",
+            "Manual"
+        };
+
         AvailableModels = new ObservableCollection<string>
         {
             selectedModel
@@ -63,6 +70,11 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<string> TranslationEngines { get; }
 
     /// <summary>
+    /// Translation timing modes available to the workspace.
+    /// </summary>
+    public ObservableCollection<string> TranslationModes { get; }
+
+    /// <summary>
     /// Models available to the selector.
     /// </summary>
     public ObservableCollection<string> AvailableModels { get; }
@@ -79,7 +91,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 UpdateDocumentCounts();
                 RaiseTranslationCommandState();
-                QueueAutomaticTranslation();
+                QueueAutomaticTranslationIfLive();
             }
         }
     }
@@ -111,10 +123,38 @@ public sealed class MainViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(IsOllamaSelected));
                 TranslationStatus = value == "Ollama" ? "Ollama translation selected." : "Built-in translation selected.";
-                QueueAutomaticTranslation();
+                QueueAutomaticTranslationIfLive();
             }
         }
     }
+
+    /// <summary>
+    /// Selected translation timing mode.
+    /// </summary>
+    public string SelectedTranslationMode
+    {
+        get => selectedTranslationMode;
+        set
+        {
+            if (SetProperty(ref selectedTranslationMode, value))
+            {
+                OnPropertyChanged(nameof(IsLiveTranslationEnabled));
+                OnPropertyChanged(nameof(ManualTranslateButtonVisibility));
+                TranslationStatus = IsLiveTranslationEnabled ? "Live sync enabled." : "Manual translation enabled.";
+                QueueAutomaticTranslationIfLive();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Indicates whether typing should automatically trigger translation.
+    /// </summary>
+    public bool IsLiveTranslationEnabled => SelectedTranslationMode == "Live";
+
+    /// <summary>
+    /// Visibility for the manual Translate button.
+    /// </summary>
+    public Visibility ManualTranslateButtonVisibility => IsLiveTranslationEnabled ? Visibility.Collapsed : Visibility.Visible;
 
     /// <summary>
     /// Indicates whether the Ollama-specific controls should be active.
@@ -131,7 +171,7 @@ public sealed class MainViewModel : ObservableObject
         {
             if (SetProperty(ref selectedModel, value))
             {
-                QueueAutomaticTranslation();
+                QueueAutomaticTranslationIfLive();
             }
         }
     }
@@ -287,6 +327,14 @@ public sealed class MainViewModel : ObservableObject
         catch (Exception exception)
         {
             TranslationStatus = $"Translation failed: {exception.Message}";
+        }
+    }
+
+    private void QueueAutomaticTranslationIfLive()
+    {
+        if (IsLiveTranslationEnabled)
+        {
+            QueueAutomaticTranslation();
         }
     }
 

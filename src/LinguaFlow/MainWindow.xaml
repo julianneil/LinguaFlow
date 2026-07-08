@@ -42,23 +42,24 @@
                     <Button Command="{Binding SaveDocumentCommand}"
                             Content="Save"
                             Style="{StaticResource CommandButtonStyle}" />
-                    <Button Command="{Binding ExportDocxCommand}"
-                            Content="DOCX"
-                            Style="{StaticResource CommandButtonStyle}" />
-                    <Button Command="{Binding ExportPdfCommand}"
-                            Content="PDF"
-                            Style="{StaticResource CommandButtonStyle}" />
                     <Button Command="{Binding CopyTranslationCommand}"
                             Content="Copy"
                             Style="{StaticResource CommandButtonStyle}" />
                     <Button Command="{Binding TranslateCommand}"
                             Content="Translate"
+                            Visibility="{Binding ManualTranslateButtonVisibility}"
                             Style="{StaticResource PrimaryCommandButtonStyle}" />
                     </WrapPanel>
                 </DockPanel>
 
                 <WrapPanel Grid.Row="1"
                            Margin="108,8,0,0">
+                    <TextBlock Text="Mode"
+                               Style="{StaticResource CommandLabelStyle}" />
+                    <ComboBox Width="116"
+                              ItemsSource="{Binding TranslationModes}"
+                              SelectedItem="{Binding SelectedTranslationMode}"
+                              Style="{StaticResource CommandComboBoxStyle}" />
                     <TextBlock Text="Engine"
                                Style="{StaticResource CommandLabelStyle}" />
                     <ComboBox Width="132"

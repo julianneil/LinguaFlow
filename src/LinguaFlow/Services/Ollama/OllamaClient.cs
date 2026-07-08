@@ -63,7 +63,12 @@ public sealed class OllamaClient
         return $"""
             You are a professional translator.
 
-            Translate the following English into natural, fluent {request.TargetLanguage}.
+            Rewrite the following English into natural, fluent {request.TargetLanguage}.
+
+            Prefer idiomatic native phrasing over literal translation.
+            Use common expressions a native speaker would choose in the same context.
+            Avoid stiff, word-for-word wording unless the requested style is Literal.
+            For "get used to waking up early", prefer "acostumbrarse a madrugar" over "habituarse a despertar temprano".
 
             Style: {request.Style}.
 

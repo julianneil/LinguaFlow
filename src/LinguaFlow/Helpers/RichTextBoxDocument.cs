@@ -2,6 +2,7 @@ namespace LinguaFlow.Helpers;
 
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Documents;
 
 /// <summary>
@@ -61,7 +62,8 @@ public static class RichTextBoxDocument
     {
         if (sender is RichTextBox richTextBox)
         {
-            SetText(richTextBox, GetDocumentText(richTextBox));
+            richTextBox.SetCurrentValue(TextProperty, GetDocumentText(richTextBox));
+            richTextBox.GetBindingExpression(TextProperty)?.UpdateSource();
         }
     }
 

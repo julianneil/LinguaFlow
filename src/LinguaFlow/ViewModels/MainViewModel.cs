@@ -15,11 +15,12 @@ public sealed class MainViewModel : ObservableObject
 {
     private readonly OllamaClient ollamaClient;
     private readonly IReadOnlyDictionary<string, ITranslationService> translationServices;
+    private CancellationTokenSource? debounceCancellation;
     private CancellationTokenSource? translationCancellation;
     private string sourceText = string.Empty;
     private string translatedText = string.Empty;
     private string selectedModel = "mistral-nemo:latest";
-    private string selectedTranslationEngine = "Built-in";
+    private string selectedTranslationEngine = "Ollama";
     private string translationStatus = "Ready";
     private string latencyDisplay = "Latency: --";
     private string tokenUsageDisplay = "Tokens: --";
@@ -78,6 +79,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 UpdateDocumentCounts();
                 RaiseTranslationCommandState();
+                QueueAutomaticTranslation();
             }
         }
     }
@@ -109,6 +111,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(IsOllamaSelected));
                 TranslationStatus = value == "Ollama" ? "Ollama translation selected." : "Built-in translation selected.";
+                QueueAutomaticTranslation();
             }
         }
     }
@@ -124,7 +127,13 @@ public sealed class MainViewModel : ObservableObject
     public string SelectedModel
     {
         get => selectedModel;
-        set => SetProperty(ref selectedModel, value);
+        set
+        {
+            if (SetProperty(ref selectedModel, value))
+            {
+                QueueAutomaticTranslation();
+            }
+        }
     }
 
     /// <summary>
@@ -239,6 +248,7 @@ public sealed class MainViewModel : ObservableObject
                     SelectedModel = AvailableModels[0];
                 }
 
+                SelectedTranslationEngine = "Ollama";
                 TranslationStatus = "Ollama models detected.";
             });
         }
@@ -249,6 +259,11 @@ public sealed class MainViewModel : ObservableObject
     }
 
     private async Task TranslateAsync()
+    {
+        await TranslateCurrentTextAsync();
+    }
+
+    private async Task TranslateCurrentTextAsync()
     {
         translationCancellation?.Cancel();
         translationCancellation = new CancellationTokenSource();
@@ -273,6 +288,39 @@ public sealed class MainViewModel : ObservableObject
         {
             TranslationStatus = $"Translation failed: {exception.Message}";
         }
+    }
+
+    private void QueueAutomaticTranslation()
+    {
+        debounceCancellation?.Cancel();
+
+        if (string.IsNullOrWhiteSpace(SourceText))
+        {
+            translationCancellation?.Cancel();
+            TranslatedText = string.Empty;
+            TranslationStatus = "Ready";
+            LatencyDisplay = "Latency: --";
+            TokenUsageDisplay = "Tokens: --";
+            return;
+        }
+
+        debounceCancellation = new CancellationTokenSource();
+        var cancellationToken = debounceCancellation.Token;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(700), cancellationToken);
+                var translateTask = await Application.Current.Dispatcher.InvokeAsync(() =>
+                    cancellationToken.IsCancellationRequested ? Task.CompletedTask : TranslateCurrentTextAsync());
+
+                await translateTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }, cancellationToken);
     }
 
     private bool CanTranslate()

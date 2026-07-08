@@ -140,15 +140,11 @@
                                  Style="{StaticResource DocumentEditorStyle}"
                                  Background="{StaticResource EditorBackgroundBrush}"
                                  CaretBrush="{StaticResource AccentBrush}"
+                                 helpers:RichTextBoxDocument.BindPlainText="True"
                                  helpers:RichTextBoxDocument.Text="{Binding SourceText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  AcceptsTab="True"
                                  SpellCheck.IsEnabled="True">
-                        <FlowDocument PagePadding="0"
-                                      ColumnWidth="999999">
-                            <Paragraph Foreground="{StaticResource MutedTextBrush}">
-                                Start writing in English here.
-                            </Paragraph>
-                        </FlowDocument>
+                        <FlowDocument PagePadding="0" ColumnWidth="999999" />
                     </RichTextBox>
                 </Grid>
             </Border>
@@ -178,14 +174,10 @@
                     <RichTextBox Grid.Row="1"
                                  Style="{StaticResource DocumentEditorStyle}"
                                  IsReadOnly="True"
+                                 helpers:RichTextBoxDocument.BindPlainText="True"
                                  helpers:RichTextBoxDocument.Text="{Binding TranslatedText}"
                                  Background="{StaticResource TranslationBackgroundBrush}">
-                        <FlowDocument PagePadding="0"
-                                      ColumnWidth="999999">
-                            <Paragraph Foreground="{StaticResource MutedTextBrush}">
-                                Translation preview will appear here when translation services are connected.
-                            </Paragraph>
-                        </FlowDocument>
+                        <FlowDocument PagePadding="0" ColumnWidth="999999" />
                     </RichTextBox>
                 </Grid>
             </Border>

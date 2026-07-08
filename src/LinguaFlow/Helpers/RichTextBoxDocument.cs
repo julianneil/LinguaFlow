@@ -11,6 +11,15 @@ using System.Windows.Documents;
 public static class RichTextBoxDocument
 {
     /// <summary>
+    /// Dependency property that activates plain-text synchronization for a RichTextBox.
+    /// </summary>
+    public static readonly DependencyProperty BindPlainTextProperty = DependencyProperty.RegisterAttached(
+        "BindPlainText",
+        typeof(bool),
+        typeof(RichTextBoxDocument),
+        new PropertyMetadata(false, OnBindPlainTextChanged));
+
+    /// <summary>
     /// Dependency property used to bind RichTextBox plain text to a view model property.
     /// </summary>
     public static readonly DependencyProperty TextProperty = DependencyProperty.RegisterAttached(
@@ -18,6 +27,26 @@ public static class RichTextBoxDocument
         typeof(string),
         typeof(RichTextBoxDocument),
         new FrameworkPropertyMetadata(string.Empty, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnTextChanged));
+
+    /// <summary>
+    /// Reads whether plain-text synchronization is active.
+    /// </summary>
+    /// <param name="element">The target RichTextBox.</param>
+    /// <returns><see langword="true" /> when synchronization is active.</returns>
+    public static bool GetBindPlainText(DependencyObject element)
+    {
+        return (bool)element.GetValue(BindPlainTextProperty);
+    }
+
+    /// <summary>
+    /// Activates or deactivates plain-text synchronization.
+    /// </summary>
+    /// <param name="element">The target RichTextBox.</param>
+    /// <param name="value">Whether synchronization should be active.</param>
+    public static void SetBindPlainText(DependencyObject element, bool value)
+    {
+        element.SetValue(BindPlainTextProperty, value);
+    }
 
     /// <summary>
     /// Reads the bound text value.
@@ -39,6 +68,23 @@ public static class RichTextBoxDocument
         element.SetValue(TextProperty, value);
     }
 
+    private static void OnBindPlainTextChanged(DependencyObject element, DependencyPropertyChangedEventArgs args)
+    {
+        if (element is not RichTextBox richTextBox)
+        {
+            return;
+        }
+
+        richTextBox.Loaded -= OnRichTextBoxLoaded;
+        richTextBox.TextChanged -= OnRichTextBoxTextChanged;
+
+        if (args.NewValue is true)
+        {
+            richTextBox.Loaded += OnRichTextBoxLoaded;
+            richTextBox.TextChanged += OnRichTextBoxTextChanged;
+        }
+    }
+
     private static void OnTextChanged(DependencyObject element, DependencyPropertyChangedEventArgs args)
     {
         if (element is not RichTextBox richTextBox)
@@ -46,25 +92,35 @@ public static class RichTextBoxDocument
             return;
         }
 
-        richTextBox.TextChanged -= OnRichTextBoxTextChanged;
-
         var newText = args.NewValue as string ?? string.Empty;
         var currentText = GetDocumentText(richTextBox);
-        if (currentText != newText)
+        if (currentText == newText)
         {
-            SetDocumentText(richTextBox, newText);
+            return;
         }
 
+        richTextBox.TextChanged -= OnRichTextBoxTextChanged;
+        SetDocumentText(richTextBox, newText);
         richTextBox.TextChanged += OnRichTextBoxTextChanged;
+    }
+
+    private static void OnRichTextBoxLoaded(object sender, RoutedEventArgs args)
+    {
+        if (sender is RichTextBox richTextBox)
+        {
+            SetDocumentText(richTextBox, GetText(richTextBox));
+        }
     }
 
     private static void OnRichTextBoxTextChanged(object sender, TextChangedEventArgs args)
     {
-        if (sender is RichTextBox richTextBox)
+        if (sender is not RichTextBox richTextBox)
         {
-            richTextBox.SetCurrentValue(TextProperty, GetDocumentText(richTextBox));
-            richTextBox.GetBindingExpression(TextProperty)?.UpdateSource();
+            return;
         }
+
+        richTextBox.SetCurrentValue(TextProperty, GetDocumentText(richTextBox));
+        richTextBox.GetBindingExpression(TextProperty)?.UpdateSource();
     }
 
     private static string GetDocumentText(RichTextBox richTextBox)

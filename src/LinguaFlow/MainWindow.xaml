@@ -5,7 +5,7 @@
         xmlns:helpers="clr-namespace:LinguaFlow.Helpers"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="LinguaFlow"
+        Title="{Binding WindowTitle}"
         MinHeight="680"
         MinWidth="1080"
         Height="740"
@@ -41,6 +41,9 @@
                             Style="{StaticResource CommandButtonStyle}" />
                     <Button Command="{Binding SaveDocumentCommand}"
                             Content="Save"
+                            Style="{StaticResource CommandButtonStyle}" />
+                    <Button Command="{Binding SaveDocumentAsCommand}"
+                            Content="Save As"
                             Style="{StaticResource CommandButtonStyle}" />
                     <Button Command="{Binding CopyTranslationCommand}"
                             Content="Copy"
@@ -93,6 +96,10 @@
             <Separator />
             <StatusBarItem>
                 <TextBlock Text="{Binding SelectedModel, StringFormat=Model: {0}}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding DocumentStatus}" />
             </StatusBarItem>
             <Separator />
             <StatusBarItem>

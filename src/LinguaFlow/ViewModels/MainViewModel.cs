@@ -1,24 +1,29 @@
 namespace LinguaFlow.ViewModels;
 
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using LinguaFlow.Helpers;
 using LinguaFlow.Models;
+using LinguaFlow.Services.Documents;
 using LinguaFlow.Services.Ollama;
 using LinguaFlow.Services.Settings;
 using LinguaFlow.Services.Translation;
+using Microsoft.Win32;
 
 public sealed class MainViewModel : ObservableObject
 {
     private readonly OllamaClient ollamaClient;
     private readonly AppSettingsService settingsService;
+    private readonly TextDocumentService textDocumentService;
     private readonly IReadOnlyDictionary<string, ITranslationService> translationServices;
     private CancellationTokenSource? debounceCancellation;
     private CancellationTokenSource? translationCancellation;
     private AppSettings settings;
     private string sourceText = string.Empty;
     private string translatedText = string.Empty;
+    private string? currentFilePath;
     private string selectedModel = "mistral-nemo:latest";
     private string selectedTranslationMode = "Live";
     private string selectedTranslationEngine = "Ollama";
@@ -29,12 +34,14 @@ public sealed class MainViewModel : ObservableObject
     private int debounceDelayMilliseconds = 700;
     private double editorFontSize = 15;
     private bool notifyWhenOllamaUnavailable = true;
+    private bool hasUnsavedChanges;
     private int wordCount;
     private int characterCount;
 
     public MainViewModel()
     {
         settingsService = new AppSettingsService();
+        textDocumentService = new TextDocumentService();
         settings = settingsService.Load();
         ollamaClient = new OllamaClient(settings.OllamaEndpoint);
         translationServices = new Dictionary<string, ITranslationService>
@@ -55,8 +62,9 @@ public sealed class MainViewModel : ObservableObject
         AvailableModels = new ObservableCollection<string> { SelectedModel };
 
         NewDocumentCommand = new RelayCommand(_ => NewDocument());
-        OpenDocumentCommand = CreatePlaceholderCommand("Open document is not connected yet.");
-        SaveDocumentCommand = CreatePlaceholderCommand("Save document is not connected yet.");
+        OpenDocumentCommand = new AsyncRelayCommand(OpenDocumentAsync);
+        SaveDocumentCommand = new AsyncRelayCommand(SaveDocumentAsync);
+        SaveDocumentAsCommand = new AsyncRelayCommand(SaveDocumentAsAsync);
         CopyTranslationCommand = new RelayCommand(_ => CopyTranslation(), _ => !string.IsNullOrWhiteSpace(TranslatedText));
         OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
         TranslateCommand = new AsyncRelayCommand(TranslateAsync, CanTranslate);
@@ -78,6 +86,7 @@ public sealed class MainViewModel : ObservableObject
             if (SetProperty(ref sourceText, value))
             {
                 UpdateDocumentCounts();
+                MarkDocumentChanged();
                 RaiseTranslationCommandState();
                 QueueAutomaticTranslationIfLive();
             }
@@ -179,11 +188,25 @@ public sealed class MainViewModel : ObservableObject
         set => SetProperty(ref editorFontSize, value);
     }
 
+    public string WindowTitle
+    {
+        get
+        {
+            var fileName = currentFilePath is null ? "Untitled" : Path.GetFileName(currentFilePath);
+            var marker = hasUnsavedChanges ? "*" : string.Empty;
+            return $"{fileName}{marker} - LinguaFlow";
+        }
+    }
+
+    public string DocumentStatus => currentFilePath is null ? "Unsaved document" : currentFilePath;
+
     public ICommand NewDocumentCommand { get; }
 
     public ICommand OpenDocumentCommand { get; }
 
     public ICommand SaveDocumentCommand { get; }
+
+    public ICommand SaveDocumentAsCommand { get; }
 
     public ICommand CopyTranslationCommand { get; }
 
@@ -312,11 +335,99 @@ public sealed class MainViewModel : ObservableObject
 
     private void NewDocument()
     {
+        translationCancellation?.Cancel();
+        debounceCancellation?.Cancel();
+        currentFilePath = null;
         SourceText = string.Empty;
         TranslatedText = string.Empty;
+        SetUnsavedChanges(false);
         LatencyDisplay = "Latency: --";
         TokenUsageDisplay = "Tokens: --";
         TranslationStatus = "New document ready.";
+    }
+
+    private async Task OpenDocumentAsync()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+            Title = "Open English Text"
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            var text = await textDocumentService.OpenAsync(dialog.FileName, CancellationToken.None);
+            currentFilePath = dialog.FileName;
+            SourceText = text;
+            TranslatedText = string.Empty;
+            SetUnsavedChanges(false);
+            TranslationStatus = "Document opened.";
+            OnPropertyChanged(nameof(WindowTitle));
+            OnPropertyChanged(nameof(DocumentStatus));
+        }
+        catch (Exception exception)
+        {
+            TranslationStatus = $"Open failed: {exception.Message}";
+        }
+    }
+
+    private async Task SaveDocumentAsync()
+    {
+        var path = currentFilePath;
+        if (path is null)
+        {
+            path = GetSavePath("Untitled.txt");
+            if (path is null)
+            {
+                return;
+            }
+        }
+
+        await SaveDocumentToPathAsync(path);
+    }
+
+    private async Task SaveDocumentAsAsync()
+    {
+        var path = GetSavePath(currentFilePath is null ? "Untitled.txt" : Path.GetFileName(currentFilePath));
+        if (path is not null)
+        {
+            await SaveDocumentToPathAsync(path);
+        }
+    }
+
+    private async Task SaveDocumentToPathAsync(string path)
+    {
+        try
+        {
+            await textDocumentService.SaveAsync(path, SourceText, TranslatedText, CancellationToken.None);
+            currentFilePath = path;
+            SetUnsavedChanges(false);
+            TranslationStatus = "Document saved.";
+            OnPropertyChanged(nameof(WindowTitle));
+            OnPropertyChanged(nameof(DocumentStatus));
+        }
+        catch (Exception exception)
+        {
+            TranslationStatus = $"Save failed: {exception.Message}";
+        }
+    }
+
+    private static string? GetSavePath(string fileName)
+    {
+        var dialog = new SaveFileDialog
+        {
+            DefaultExt = ".txt",
+            Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+            FileName = fileName,
+            Title = "Save LinguaFlow Text"
+        };
+
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
     private void CopyTranslation()
@@ -388,9 +499,23 @@ public sealed class MainViewModel : ObservableObject
         WordCount = SourceText.Split([' ', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
     }
 
-    private RelayCommand CreatePlaceholderCommand(string statusMessage)
+    private void MarkDocumentChanged()
     {
-        return new RelayCommand(_ => TranslationStatus = statusMessage);
+        if (!hasUnsavedChanges)
+        {
+            SetUnsavedChanges(true);
+        }
+    }
+
+    private void SetUnsavedChanges(bool value)
+    {
+        if (hasUnsavedChanges == value)
+        {
+            return;
+        }
+
+        hasUnsavedChanges = value;
+        OnPropertyChanged(nameof(WindowTitle));
     }
 
     private void RaiseTranslationCommandState()

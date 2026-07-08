@@ -7,6 +7,8 @@ using System.Windows.Documents;
 
 public static class RichTextBoxDocument
 {
+    // RichTextBox does not expose a bindable Text property. This attached-property shim
+    // keeps plain text in MVVM for now; formatted document syncing will need a different path.
     public static readonly DependencyProperty BindPlainTextProperty = DependencyProperty.RegisterAttached(
         "BindPlainText",
         typeof(bool),
@@ -70,6 +72,8 @@ public static class RichTextBoxDocument
             return;
         }
 
+        // Updating the document raises TextChanged. Unhook first or this quietly loops back
+        // through the binding system and makes typing feel cursed.
         richTextBox.TextChanged -= OnRichTextBoxTextChanged;
         SetDocumentText(richTextBox, newText);
         richTextBox.TextChanged += OnRichTextBoxTextChanged;
@@ -90,6 +94,8 @@ public static class RichTextBoxDocument
             return;
         }
 
+        // SetCurrentValue preserves the binding expression. SetValue looks tempting here,
+        // but it can replace the binding and make the editor stop reporting changes.
         richTextBox.SetCurrentValue(TextProperty, GetDocumentText(richTextBox));
         richTextBox.GetBindingExpression(TextProperty)?.UpdateSource();
     }

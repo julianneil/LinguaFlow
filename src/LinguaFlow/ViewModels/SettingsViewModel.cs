@@ -116,6 +116,8 @@ public sealed class SettingsViewModel : ObservableObject
 
     private static int ParseDelay(string value)
     {
+        // Keep these as text fields in the dialog. WPF numeric bindings can throw while the
+        // user is halfway through editing, which is how a simple delay change used to close the app.
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var delay)
             ? Math.Clamp(delay, 250, 5000)
             : 700;

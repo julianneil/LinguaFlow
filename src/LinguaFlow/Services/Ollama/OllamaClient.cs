@@ -82,6 +82,8 @@ public sealed class OllamaClient
             return DefaultEndpoint;
         }
 
+        // HttpClient combines BaseAddress with relative paths differently when the trailing
+        // slash is missing. Normalize once here and spare the API calls from subtle URL bugs.
         var normalized = uri.ToString().TrimEnd('/') + "/";
         return new Uri(normalized);
     }

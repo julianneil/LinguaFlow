@@ -287,6 +287,8 @@ public sealed class MainViewModel : ObservableObject
         debounceCancellation = new CancellationTokenSource();
         var cancellationToken = debounceCancellation.Token;
 
+        // The app intentionally lets old delayed tasks die quietly. Only the newest pause in
+        // typing should reach Ollama; otherwise slow responses can overwrite fresher text.
         _ = Task.Run(async () =>
         {
             try
@@ -357,6 +359,8 @@ public sealed class MainViewModel : ObservableObject
         EditorFontSize = settings.FontSize;
         ollamaClient.ConfigureEndpoint(settings.OllamaEndpoint);
 
+        // Assign the backing fields directly so loading saved settings does not trigger a
+        // translation request before the rest of the window has caught up.
         selectedTranslationMode = settings.TranslationMode;
         selectedTranslationEngine = settings.TranslationEngine;
         selectedModel = settings.OllamaModel;

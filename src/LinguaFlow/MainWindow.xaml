@@ -5,63 +5,77 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="LinguaFlow"
-        MinHeight="720"
-        MinWidth="1120"
-        Height="760"
-        Width="1220"
+        MinHeight="680"
+        MinWidth="1080"
+        Height="740"
+        Width="1180"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource AppBackgroundBrush}">
     <DockPanel LastChildFill="True">
-        <ToolBarTray DockPanel.Dock="Top"
-                     Background="{StaticResource ToolbarBackgroundBrush}">
-            <ToolBar Style="{StaticResource MainToolBarStyle}">
-                <Button Command="{Binding NewDocumentCommand}"
-                        Content="New"
-                        Style="{StaticResource ToolbarButtonStyle}" />
-                <Button Command="{Binding OpenDocumentCommand}"
-                        Content="Open"
-                        Style="{StaticResource ToolbarButtonStyle}" />
-                <Button Command="{Binding SaveDocumentCommand}"
-                        Content="Save"
-                        Style="{StaticResource ToolbarButtonStyle}" />
-                <Separator />
-                <Button Command="{Binding ExportDocxCommand}"
-                        Content="Export DOCX"
-                        Style="{StaticResource ToolbarButtonStyle}" />
-                <Button Command="{Binding ExportPdfCommand}"
-                        Content="Export PDF"
-                        Style="{StaticResource ToolbarButtonStyle}" />
-                <Button Command="{Binding CopyTranslationCommand}"
-                        Content="Copy Translation"
-                        Style="{StaticResource ToolbarButtonStyle}" />
-                <Separator />
-                <TextBlock Text="Engine"
-                           Style="{StaticResource ToolbarLabelStyle}" />
-                <ComboBox Width="150"
-                          ItemsSource="{Binding TranslationEngines}"
-                          SelectedItem="{Binding SelectedTranslationEngine}"
-                          Style="{StaticResource ToolbarComboBoxStyle}" />
-                <TextBlock Text="Language"
-                           Style="{StaticResource ToolbarLabelStyle}" />
-                <ComboBox Width="130"
-                          IsEnabled="False"
-                          SelectedIndex="0"
-                          Style="{StaticResource ToolbarComboBoxStyle}">
-                    <ComboBoxItem Content="Spanish" />
-                </ComboBox>
-                <TextBlock Text="Model"
-                           Style="{StaticResource ToolbarLabelStyle}" />
-                <ComboBox Width="190"
-                          ItemsSource="{Binding AvailableModels}"
-                          SelectedItem="{Binding SelectedModel}"
-                          IsEnabled="{Binding IsOllamaSelected}"
-                          Style="{StaticResource ToolbarComboBoxStyle}" />
-                <Separator />
-                <Button Command="{Binding OpenSettingsCommand}"
-                        Content="Settings"
-                        Style="{StaticResource ToolbarButtonStyle}" />
-            </ToolBar>
-        </ToolBarTray>
+        <Border DockPanel.Dock="Top"
+                Style="{StaticResource CommandBarStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="LinguaFlow"
+                           Style="{StaticResource AppTitleStyle}" />
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal">
+                    <Button Command="{Binding NewDocumentCommand}"
+                            Content="New"
+                            Style="{StaticResource CommandButtonStyle}" />
+                    <Button Command="{Binding OpenDocumentCommand}"
+                            Content="Open"
+                            Style="{StaticResource CommandButtonStyle}" />
+                    <Button Command="{Binding SaveDocumentCommand}"
+                            Content="Save"
+                            Style="{StaticResource CommandButtonStyle}" />
+                    <Button Command="{Binding ExportDocxCommand}"
+                            Content="DOCX"
+                            Style="{StaticResource CommandButtonStyle}" />
+                    <Button Command="{Binding ExportPdfCommand}"
+                            Content="PDF"
+                            Style="{StaticResource CommandButtonStyle}" />
+                    <Button Command="{Binding CopyTranslationCommand}"
+                            Content="Copy"
+                            Style="{StaticResource CommandButtonStyle}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal">
+                    <TextBlock Text="Engine"
+                               Style="{StaticResource CommandLabelStyle}" />
+                    <ComboBox Width="132"
+                              ItemsSource="{Binding TranslationEngines}"
+                              SelectedItem="{Binding SelectedTranslationEngine}"
+                              Style="{StaticResource CommandComboBoxStyle}" />
+                    <TextBlock Text="To"
+                               Style="{StaticResource CommandLabelStyle}" />
+                    <ComboBox Width="112"
+                              IsEnabled="False"
+                              SelectedIndex="0"
+                              Style="{StaticResource CommandComboBoxStyle}">
+                        <ComboBoxItem Content="Spanish" />
+                    </ComboBox>
+                    <TextBlock Text="Model"
+                               Style="{StaticResource CommandLabelStyle}" />
+                    <ComboBox Width="178"
+                              ItemsSource="{Binding AvailableModels}"
+                              SelectedItem="{Binding SelectedModel}"
+                              IsEnabled="{Binding IsOllamaSelected}"
+                              Style="{StaticResource CommandComboBoxStyle}" />
+                    <Button Command="{Binding OpenSettingsCommand}"
+                            Content="Settings"
+                            Style="{StaticResource CommandButtonStyle}" />
+                </StackPanel>
+            </Grid>
+        </Border>
 
         <StatusBar DockPanel.Dock="Bottom"
                    Style="{StaticResource MainStatusBarStyle}">
@@ -94,7 +108,7 @@
             </StatusBarItem>
         </StatusBar>
 
-        <Grid Margin="20">
+        <Grid Style="{StaticResource WorkspaceStyle}">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" MinWidth="430" />
                 <ColumnDefinition Width="16" />
@@ -119,14 +133,9 @@
                     </DockPanel>
 
                     <RichTextBox Grid.Row="1"
-                                 BorderThickness="0"
+                                 Style="{StaticResource DocumentEditorStyle}"
                                  Background="{StaticResource EditorBackgroundBrush}"
-                                 Foreground="{StaticResource PrimaryTextBrush}"
                                  CaretBrush="{StaticResource AccentBrush}"
-                                 FontFamily="Segoe UI"
-                                 FontSize="15"
-                                 Padding="22"
-                                 VerticalScrollBarVisibility="Auto"
                                  AcceptsTab="True"
                                  SpellCheck.IsEnabled="True">
                         <FlowDocument PagePadding="0"
@@ -162,14 +171,9 @@
                     </DockPanel>
 
                     <RichTextBox Grid.Row="1"
+                                 Style="{StaticResource DocumentEditorStyle}"
                                  IsReadOnly="True"
-                                 BorderThickness="0"
-                                 Background="{StaticResource TranslationBackgroundBrush}"
-                                 Foreground="{StaticResource PrimaryTextBrush}"
-                                 FontFamily="Segoe UI"
-                                 FontSize="15"
-                                 Padding="22"
-                                 VerticalScrollBarVisibility="Auto">
+                                 Background="{StaticResource TranslationBackgroundBrush}">
                         <FlowDocument PagePadding="0"
                                       ColumnWidth="999999">
                             <Paragraph Foreground="{StaticResource MutedTextBrush}">

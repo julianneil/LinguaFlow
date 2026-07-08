@@ -16,18 +16,23 @@
         <Border DockPanel.Dock="Top"
                 Style="{StaticResource CommandBarStyle}">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                <TextBlock Grid.Column="0"
+                <DockPanel Grid.Row="0"
+                           LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Left"
                            Text="LinguaFlow"
                            Style="{StaticResource AppTitleStyle}" />
 
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal">
+                    <Button DockPanel.Dock="Right"
+                            Command="{Binding OpenSettingsCommand}"
+                            Content="Settings"
+                            Style="{StaticResource CommandButtonStyle}" />
+
+                    <WrapPanel>
                     <Button Command="{Binding NewDocumentCommand}"
                             Content="New"
                             Style="{StaticResource CommandButtonStyle}" />
@@ -49,10 +54,11 @@
                     <Button Command="{Binding TranslateCommand}"
                             Content="Translate"
                             Style="{StaticResource PrimaryCommandButtonStyle}" />
-                </StackPanel>
+                    </WrapPanel>
+                </DockPanel>
 
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal">
+                <WrapPanel Grid.Row="1"
+                           Margin="108,8,0,0">
                     <TextBlock Text="Engine"
                                Style="{StaticResource CommandLabelStyle}" />
                     <ComboBox Width="132"
@@ -74,10 +80,7 @@
                               SelectedItem="{Binding SelectedModel}"
                               IsEnabled="{Binding IsOllamaSelected}"
                               Style="{StaticResource CommandComboBoxStyle}" />
-                    <Button Command="{Binding OpenSettingsCommand}"
-                            Content="Settings"
-                            Style="{StaticResource CommandButtonStyle}" />
-                </StackPanel>
+                </WrapPanel>
             </Grid>
         </Border>
 

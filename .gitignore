@@ -29,6 +29,9 @@ packages/
 # Logs
 *.log
 
+# Local project notes
+LinguaFlow.txt
+
 # OS files
 Thumbs.db
 Desktop.ini

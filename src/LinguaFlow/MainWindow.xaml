@@ -144,6 +144,7 @@
                                  Style="{StaticResource DocumentEditorStyle}"
                                  Background="{StaticResource EditorBackgroundBrush}"
                                  CaretBrush="{StaticResource AccentBrush}"
+                                 FontSize="{Binding EditorFontSize}"
                                  helpers:RichTextBoxDocument.BindPlainText="True"
                                  helpers:RichTextBoxDocument.Text="{Binding SourceText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  AcceptsTab="True"
@@ -178,6 +179,7 @@
                     <RichTextBox Grid.Row="1"
                                  Style="{StaticResource DocumentEditorStyle}"
                                  IsReadOnly="True"
+                                 FontSize="{Binding EditorFontSize}"
                                  helpers:RichTextBoxDocument.BindPlainText="True"
                                  helpers:RichTextBoxDocument.Text="{Binding TranslatedText}"
                                  Background="{StaticResource TranslationBackgroundBrush}">

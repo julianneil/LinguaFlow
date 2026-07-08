@@ -23,12 +23,30 @@ public sealed class OllamaClient
     }
 
     /// <summary>
+    /// Creates an Ollama client for a configured endpoint.
+    /// </summary>
+    /// <param name="endpoint">Base endpoint such as http://localhost:11434.</param>
+    public OllamaClient(string endpoint)
+        : this(new HttpClient { BaseAddress = CreateEndpoint(endpoint), Timeout = TimeSpan.FromMinutes(5) })
+    {
+    }
+
+    /// <summary>
     /// Creates an Ollama client with a caller-owned HTTP client.
     /// </summary>
     /// <param name="httpClient">Configured HTTP client.</param>
     public OllamaClient(HttpClient httpClient)
     {
         this.httpClient = httpClient;
+    }
+
+    /// <summary>
+    /// Updates the base endpoint used by future Ollama requests.
+    /// </summary>
+    /// <param name="endpoint">Base endpoint such as http://localhost:11434.</param>
+    public void ConfigureEndpoint(string endpoint)
+    {
+        httpClient.BaseAddress = CreateEndpoint(endpoint);
     }
 
     /// <summary>
@@ -84,6 +102,17 @@ public sealed class OllamaClient
             Maintain professional grammar.
             Output only the translated document.
             """;
+    }
+
+    private static Uri CreateEndpoint(string endpoint)
+    {
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            return DefaultEndpoint;
+        }
+
+        var normalized = uri.ToString().TrimEnd('/') + "/";
+        return new Uri(normalized);
     }
 
     private sealed record OllamaTagsResponse([property: JsonPropertyName("models")] OllamaModel[] Models);

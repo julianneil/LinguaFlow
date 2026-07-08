@@ -6,6 +6,7 @@ using System.Windows.Input;
 using LinguaFlow.Helpers;
 using LinguaFlow.Models;
 using LinguaFlow.Services.Ollama;
+using LinguaFlow.Services.Settings;
 using LinguaFlow.Services.Translation;
 
 /// <summary>
@@ -14,9 +15,11 @@ using LinguaFlow.Services.Translation;
 public sealed class MainViewModel : ObservableObject
 {
     private readonly OllamaClient ollamaClient;
+    private readonly AppSettingsService settingsService;
     private readonly IReadOnlyDictionary<string, ITranslationService> translationServices;
     private CancellationTokenSource? debounceCancellation;
     private CancellationTokenSource? translationCancellation;
+    private AppSettings settings;
     private string sourceText = string.Empty;
     private string translatedText = string.Empty;
     private string selectedModel = "mistral-nemo:latest";
@@ -25,6 +28,10 @@ public sealed class MainViewModel : ObservableObject
     private string translationStatus = "Ready";
     private string latencyDisplay = "Latency: --";
     private string tokenUsageDisplay = "Tokens: --";
+    private string translationStyle = "Natural";
+    private int debounceDelayMilliseconds = 700;
+    private double editorFontSize = 15;
+    private bool notifyWhenOllamaUnavailable = true;
     private int wordCount;
     private int characterCount;
 
@@ -33,7 +40,9 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     public MainViewModel()
     {
-        ollamaClient = new OllamaClient();
+        settingsService = new AppSettingsService();
+        settings = settingsService.Load();
+        ollamaClient = new OllamaClient(settings.OllamaEndpoint);
         translationServices = new Dictionary<string, ITranslationService>
         {
             ["Built-in"] = new BuiltInTranslationService(),
@@ -47,10 +56,9 @@ public sealed class MainViewModel : ObservableObject
             "Manual"
         };
 
-        AvailableModels = new ObservableCollection<string>
-        {
-            selectedModel
-        };
+        ApplySettings(settings, save: false, queueTranslation: false);
+
+        AvailableModels = new ObservableCollection<string> { SelectedModel };
 
         NewDocumentCommand = new RelayCommand(_ => NewDocument());
         OpenDocumentCommand = CreatePlaceholderCommand("Open document is not connected yet.");
@@ -58,7 +66,7 @@ public sealed class MainViewModel : ObservableObject
         ExportDocxCommand = CreatePlaceholderCommand("DOCX export is not connected yet.");
         ExportPdfCommand = CreatePlaceholderCommand("PDF export is not connected yet.");
         CopyTranslationCommand = new RelayCommand(_ => CopyTranslation(), _ => !string.IsNullOrWhiteSpace(TranslatedText));
-        OpenSettingsCommand = CreatePlaceholderCommand("Settings are not connected yet.");
+        OpenSettingsCommand = new RelayCommand(_ => OpenSettings());
         TranslateCommand = new AsyncRelayCommand(TranslateAsync, CanTranslate);
 
         _ = LoadOllamaModelsAsync();
@@ -222,6 +230,15 @@ public sealed class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Current editor font size.
+    /// </summary>
+    public double EditorFontSize
+    {
+        get => editorFontSize;
+        set => SetProperty(ref editorFontSize, value);
+    }
+
+    /// <summary>
     /// Starts a new document.
     /// </summary>
     public ICommand NewDocumentCommand { get; }
@@ -294,7 +311,9 @@ public sealed class MainViewModel : ObservableObject
         }
         catch
         {
-            TranslationStatus = "Ollama is not available. Built-in translation can still be used.";
+            TranslationStatus = notifyWhenOllamaUnavailable
+                ? "Ollama is not running. Start Ollama or switch to Built-in."
+                : "Built-in translation is available.";
         }
     }
 
@@ -312,7 +331,7 @@ public sealed class MainViewModel : ObservableObject
         {
             TranslationStatus = "Translating...";
             var service = translationServices[SelectedTranslationEngine];
-            var request = new TranslationRequest(SourceText, "Spanish", "Natural", SelectedModel);
+            var request = new TranslationRequest(SourceText, "Spanish", translationStyle, SelectedModel);
             var result = await service.TranslateAsync(request, translationCancellation.Token);
 
             TranslatedText = result.Text;
@@ -359,7 +378,7 @@ public sealed class MainViewModel : ObservableObject
         {
             try
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(700), cancellationToken);
+                await Task.Delay(TimeSpan.FromMilliseconds(debounceDelayMilliseconds), cancellationToken);
                 var translateTask = await Application.Current.Dispatcher.InvokeAsync(() =>
                     cancellationToken.IsCancellationRequested ? Task.CompletedTask : TranslateCurrentTextAsync());
 
@@ -391,6 +410,51 @@ public sealed class MainViewModel : ObservableObject
         {
             Clipboard.SetText(TranslatedText);
             TranslationStatus = "Translation copied.";
+        }
+    }
+
+    private void OpenSettings()
+    {
+        var settingsViewModel = new SettingsViewModel(settings, AvailableModels);
+        var settingsWindow = new SettingsWindow(settingsViewModel)
+        {
+            Owner = Application.Current.MainWindow
+        };
+
+        if (settingsWindow.ShowDialog() == true)
+        {
+            ApplySettings(settingsViewModel.ToSettings(), save: true, queueTranslation: true);
+            TranslationStatus = "Settings saved.";
+        }
+    }
+
+    private void ApplySettings(AppSettings newSettings, bool save, bool queueTranslation)
+    {
+        settings = newSettings;
+        debounceDelayMilliseconds = Math.Clamp(settings.DebounceDelayMilliseconds, 250, 5000);
+        translationStyle = settings.TranslationStyle;
+        notifyWhenOllamaUnavailable = settings.NotifyWhenOllamaUnavailable;
+        EditorFontSize = settings.FontSize;
+        ollamaClient.ConfigureEndpoint(settings.OllamaEndpoint);
+
+        selectedTranslationMode = settings.TranslationMode;
+        selectedTranslationEngine = settings.TranslationEngine;
+        selectedModel = settings.OllamaModel;
+        OnPropertyChanged(nameof(SelectedTranslationMode));
+        OnPropertyChanged(nameof(SelectedTranslationEngine));
+        OnPropertyChanged(nameof(SelectedModel));
+        OnPropertyChanged(nameof(IsLiveTranslationEnabled));
+        OnPropertyChanged(nameof(IsOllamaSelected));
+        OnPropertyChanged(nameof(ManualTranslateButtonVisibility));
+
+        if (save)
+        {
+            settingsService.Save(settings);
+        }
+
+        if (queueTranslation)
+        {
+            QueueAutomaticTranslationIfLive();
         }
     }
 

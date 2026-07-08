@@ -1,6 +1,7 @@
 namespace LinguaFlow.ViewModels;
 
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Windows.Input;
 using LinguaFlow.Helpers;
 using LinguaFlow.Models;
@@ -15,9 +16,9 @@ public sealed class SettingsViewModel : ObservableObject
     private string selectedModel;
     private string ollamaEndpoint;
     private bool notifyWhenOllamaUnavailable;
-    private int debounceDelayMilliseconds;
+    private string debounceDelayMillisecondsText;
     private string selectedTranslationStyle;
-    private double fontSize;
+    private string fontSizeText;
 
     /// <summary>
     /// Creates a settings editor from existing application settings.
@@ -36,9 +37,9 @@ public sealed class SettingsViewModel : ObservableObject
         selectedModel = settings.OllamaModel;
         ollamaEndpoint = settings.OllamaEndpoint;
         notifyWhenOllamaUnavailable = settings.NotifyWhenOllamaUnavailable;
-        debounceDelayMilliseconds = settings.DebounceDelayMilliseconds;
+        debounceDelayMillisecondsText = settings.DebounceDelayMilliseconds.ToString(CultureInfo.InvariantCulture);
         selectedTranslationStyle = settings.TranslationStyle;
-        fontSize = settings.FontSize;
+        fontSizeText = settings.FontSize.ToString(CultureInfo.InvariantCulture);
 
         SaveCommand = new RelayCommand(_ => RequestClose?.Invoke(true));
         CancelCommand = new RelayCommand(_ => RequestClose?.Invoke(false));
@@ -117,10 +118,10 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>
     /// Delay after typing stops before live translation starts.
     /// </summary>
-    public int DebounceDelayMilliseconds
+    public string DebounceDelayMillisecondsText
     {
-        get => debounceDelayMilliseconds;
-        set => SetProperty(ref debounceDelayMilliseconds, Math.Clamp(value, 250, 5000));
+        get => debounceDelayMillisecondsText;
+        set => SetProperty(ref debounceDelayMillisecondsText, value);
     }
 
     /// <summary>
@@ -135,10 +136,10 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>
     /// Editor font size.
     /// </summary>
-    public double FontSize
+    public string FontSizeText
     {
-        get => fontSize;
-        set => SetProperty(ref fontSize, Math.Clamp(value, 10, 28));
+        get => fontSizeText;
+        set => SetProperty(ref fontSizeText, value);
     }
 
     /// <summary>
@@ -164,9 +165,23 @@ public sealed class SettingsViewModel : ObservableObject
             OllamaModel = SelectedModel,
             OllamaEndpoint = OllamaEndpoint,
             NotifyWhenOllamaUnavailable = NotifyWhenOllamaUnavailable,
-            DebounceDelayMilliseconds = DebounceDelayMilliseconds,
+            DebounceDelayMilliseconds = ParseDelay(DebounceDelayMillisecondsText),
             TranslationStyle = SelectedTranslationStyle,
-            FontSize = FontSize
+            FontSize = ParseFontSize(FontSizeText)
         };
+    }
+
+    private static int ParseDelay(string value)
+    {
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var delay)
+            ? Math.Clamp(delay, 250, 5000)
+            : 700;
+    }
+
+    private static double ParseFontSize(string value)
+    {
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var fontSize)
+            ? Math.Clamp(fontSize, 10, 28)
+            : 15;
     }
 }

@@ -415,16 +415,23 @@ public sealed class MainViewModel : ObservableObject
 
     private void OpenSettings()
     {
-        var settingsViewModel = new SettingsViewModel(settings, AvailableModels);
-        var settingsWindow = new SettingsWindow(settingsViewModel)
+        try
         {
-            Owner = Application.Current.MainWindow
-        };
+            var settingsViewModel = new SettingsViewModel(settings, AvailableModels);
+            var settingsWindow = new SettingsWindow(settingsViewModel)
+            {
+                Owner = Application.Current.MainWindow
+            };
 
-        if (settingsWindow.ShowDialog() == true)
+            if (settingsWindow.ShowDialog() == true)
+            {
+                ApplySettings(settingsViewModel.ToSettings(), save: true, queueTranslation: true);
+                TranslationStatus = "Settings saved.";
+            }
+        }
+        catch (Exception exception)
         {
-            ApplySettings(settingsViewModel.ToSettings(), save: true, queueTranslation: true);
-            TranslationStatus = "Settings saved.";
+            TranslationStatus = $"Settings could not be saved: {exception.Message}";
         }
     }
 

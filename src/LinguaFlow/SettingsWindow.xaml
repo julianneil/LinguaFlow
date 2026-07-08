@@ -107,11 +107,11 @@
 
                         <TextBlock Grid.Row="0" Text="Live delay (ms)" Style="{StaticResource SettingsLabelStyle}" />
                         <TextBox Grid.Row="0" Grid.Column="1"
-                                 Text="{Binding DebounceDelayMilliseconds, UpdateSourceTrigger=PropertyChanged}" />
+                                 Text="{Binding DebounceDelayMillisecondsText, UpdateSourceTrigger=PropertyChanged}" />
 
                         <TextBlock Grid.Row="1" Text="Font size" Style="{StaticResource SettingsLabelStyle}" />
                         <TextBox Grid.Row="1" Grid.Column="1"
-                                 Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}" />
+                                 Text="{Binding FontSizeText, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                 </StackPanel>
             </ScrollViewer>

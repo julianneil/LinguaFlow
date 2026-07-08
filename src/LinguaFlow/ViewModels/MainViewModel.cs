@@ -1,6 +1,7 @@
 namespace LinguaFlow.ViewModels;
 
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
@@ -18,6 +19,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly AppSettingsService settingsService;
     private readonly TextDocumentService textDocumentService;
     private readonly IReadOnlyDictionary<string, ITranslationService> translationServices;
+    private readonly Dictionary<string, string> paragraphTranslationCache = [];
     private CancellationTokenSource? debounceCancellation;
     private CancellationTokenSource? translationCancellation;
     private AppSettings settings;
@@ -114,6 +116,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(IsOllamaSelected));
                 TranslationStatus = value == "Ollama" ? "Ollama translation selected." : "Built-in translation selected.";
+                ClearParagraphCache();
                 QueueAutomaticTranslationIfLive();
             }
         }
@@ -147,6 +150,7 @@ public sealed class MainViewModel : ObservableObject
         {
             if (SetProperty(ref selectedModel, value))
             {
+                ClearParagraphCache();
                 QueueAutomaticTranslationIfLive();
             }
         }
@@ -262,18 +266,23 @@ public sealed class MainViewModel : ObservableObject
     {
         translationCancellation?.Cancel();
         translationCancellation = new CancellationTokenSource();
+        var cancellationToken = translationCancellation.Token;
 
         try
         {
             TranslationStatus = "Translating...";
             var service = translationServices[SelectedTranslationEngine];
-            var request = new TranslationRequest(SourceText, "Spanish", translationStyle, SelectedModel);
-            var result = await service.TranslateAsync(request, translationCancellation.Token);
+            var result = await TranslateParagraphsAsync(service, cancellationToken);
 
             TranslatedText = result.Text;
             LatencyDisplay = $"Latency: {result.Latency.TotalMilliseconds:0} ms";
             TokenUsageDisplay = result.TokenUsage is null ? "Tokens: --" : $"Tokens: {result.TokenUsage}";
-            TranslationStatus = "Translation complete.";
+            TranslationStatus = result.UpdatedParagraphCount switch
+            {
+                0 => "Translation complete. Cached paragraphs reused.",
+                1 => "Translation complete. 1 paragraph updated.",
+                _ => $"Translation complete. {result.UpdatedParagraphCount} paragraphs updated."
+            };
         }
         catch (OperationCanceledException)
         {
@@ -283,6 +292,55 @@ public sealed class MainViewModel : ObservableObject
         {
             TranslationStatus = $"Translation failed: {exception.Message}";
         }
+    }
+
+    private async Task<ParagraphTranslationResult> TranslateParagraphsAsync(
+        ITranslationService service,
+        CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var paragraphs = SplitParagraphs(SourceText);
+        var translatedParagraphs = new List<string>(paragraphs.Count);
+        var tokenUsage = 0;
+        var hasTokenUsage = false;
+        var updatedParagraphs = 0;
+
+        foreach (var paragraph in paragraphs)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (string.IsNullOrWhiteSpace(paragraph))
+            {
+                translatedParagraphs.Add(paragraph);
+                continue;
+            }
+
+            var cacheKey = BuildParagraphCacheKey(paragraph);
+            if (paragraphTranslationCache.TryGetValue(cacheKey, out var cachedTranslation))
+            {
+                translatedParagraphs.Add(cachedTranslation);
+                continue;
+            }
+
+            var request = new TranslationRequest(paragraph, "Spanish", translationStyle, SelectedModel);
+            var result = await service.TranslateAsync(request, cancellationToken);
+            paragraphTranslationCache[cacheKey] = result.Text;
+            translatedParagraphs.Add(result.Text);
+            updatedParagraphs++;
+
+            if (result.TokenUsage is not null)
+            {
+                tokenUsage += result.TokenUsage.Value;
+                hasTokenUsage = true;
+            }
+        }
+
+        stopwatch.Stop();
+        return new ParagraphTranslationResult(
+            string.Join(Environment.NewLine, translatedParagraphs),
+            stopwatch.Elapsed,
+            hasTokenUsage ? tokenUsage : null,
+            updatedParagraphs);
     }
 
     private void QueueAutomaticTranslationIfLive()
@@ -338,6 +396,7 @@ public sealed class MainViewModel : ObservableObject
         translationCancellation?.Cancel();
         debounceCancellation?.Cancel();
         currentFilePath = null;
+        ClearParagraphCache();
         SourceText = string.Empty;
         TranslatedText = string.Empty;
         SetUnsavedChanges(false);
@@ -363,6 +422,7 @@ public sealed class MainViewModel : ObservableObject
         {
             var text = await textDocumentService.OpenAsync(dialog.FileName, CancellationToken.None);
             currentFilePath = dialog.FileName;
+            ClearParagraphCache();
             SourceText = text;
             TranslatedText = string.Empty;
             SetUnsavedChanges(false);
@@ -469,6 +529,7 @@ public sealed class MainViewModel : ObservableObject
         notifyWhenOllamaUnavailable = settings.NotifyWhenOllamaUnavailable;
         EditorFontSize = settings.FontSize;
         ollamaClient.ConfigureEndpoint(settings.OllamaEndpoint);
+        ClearParagraphCache();
 
         // Assign the backing fields directly so loading saved settings does not trigger a
         // translation request before the rest of the window has caught up.
@@ -497,6 +558,21 @@ public sealed class MainViewModel : ObservableObject
     {
         CharacterCount = SourceText.Length;
         WordCount = SourceText.Split([' ', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    private void ClearParagraphCache()
+    {
+        paragraphTranslationCache.Clear();
+    }
+
+    private string BuildParagraphCacheKey(string paragraph)
+    {
+        return string.Join('\u001f', SelectedTranslationEngine, SelectedModel, translationStyle, paragraph);
+    }
+
+    private static List<string> SplitParagraphs(string text)
+    {
+        return text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
     }
 
     private void MarkDocumentChanged()
@@ -533,4 +609,6 @@ public sealed class MainViewModel : ObservableObject
             command.RaiseCanExecuteChanged();
         }
     }
+
+    private sealed record ParagraphTranslationResult(string Text, TimeSpan Latency, int? TokenUsage, int UpdatedParagraphCount);
 }
